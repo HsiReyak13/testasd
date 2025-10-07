@@ -1,0 +1,7 @@
+Date,Product,Category,Units_Sold,Revenue
+2025-01-01,Laptop,Electronics,10,5000
+2025-01-01,Phone,Electronics,15,3000
+2025-01-02,Shirt,Clothing,20,400
+2025-01-02,Laptop,Electronics,,2500
+2025-01-03,Phone,Electronics,12,2400
+2025-01-03,Shirt,Clothing,25,
