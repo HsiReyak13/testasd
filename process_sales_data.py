@@ -10,9 +10,146 @@ Author: Data Processing Script
 Date: 2025-10-07
 """
 
-import pandas as pd
 import sys
 import os
+import subprocess
+import importlib.util
+
+
+def check_and_install_dependencies():
+    """
+    Check if required dependencies are installed and offer to install them if missing.
+    
+    Returns:
+        bool: True if all dependencies are available, False otherwise
+    """
+    required_packages = {
+        'pandas': 'pandas>=2.0.0',
+        'numpy': 'numpy>=1.21.0'
+    }
+    
+    missing_packages = []
+    
+    print("🔍 Checking required dependencies...")
+    
+    for package_name, pip_name in required_packages.items():
+        try:
+            spec = importlib.util.find_spec(package_name)
+            if spec is not None:
+                # Try to import to ensure it's working
+                module = importlib.import_module(package_name)
+                version = getattr(module, '__version__', 'unknown')
+                print(f"✓ {package_name} {version} is available")
+            else:
+                missing_packages.append((package_name, pip_name))
+                print(f"✗ {package_name} is not installed")
+        except ImportError:
+            missing_packages.append((package_name, pip_name))
+            print(f"✗ {package_name} import failed")
+    
+    if not missing_packages:
+        print("✅ All required dependencies are installed!")
+        return True
+    
+    print(f"\n⚠ Missing {len(missing_packages)} required package(s):")
+    for package_name, pip_name in missing_packages:
+        print(f"   - {package_name}")
+    
+    print("\n📦 Installation options:")
+    print("1. Install from requirements.txt (recommended):")
+    print("   pip install -r requirements.txt")
+    print("\n2. Install individual packages:")
+    for package_name, pip_name in missing_packages:
+        print(f"   pip install {pip_name}")
+    print("\n3. Use the setup script:")
+    print("   python setup.py install")
+    
+    # Ask user if they want to auto-install
+    try:
+        response = input("\n🤔 Would you like to automatically install missing packages? (y/N): ").strip().lower()
+        if response in ['y', 'yes']:
+            return auto_install_dependencies(missing_packages)
+        else:
+            print("\n❌ Cannot proceed without required dependencies.")
+            print("Please install the missing packages and run the script again.")
+            return False
+    except (KeyboardInterrupt, EOFError):
+        print("\n\n❌ Installation cancelled by user.")
+        return False
+
+
+def auto_install_dependencies(missing_packages):
+    """
+    Automatically install missing dependencies using pip.
+    
+    Args:
+        missing_packages (list): List of tuples (package_name, pip_name)
+    
+    Returns:
+        bool: True if installation successful, False otherwise
+    """
+    print("\n📦 Installing missing packages...")
+    
+    try:
+        # First try to install from requirements.txt if it exists
+        if os.path.exists('requirements.txt'):
+            print("📋 Installing from requirements.txt...")
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install", "-r", "requirements.txt"
+            ], capture_output=True, text=True, check=True)
+            print("✅ Successfully installed packages from requirements.txt")
+        else:
+            # Install individual packages
+            for package_name, pip_name in missing_packages:
+                print(f"📦 Installing {package_name}...")
+                result = subprocess.run([
+                    sys.executable, "-m", "pip", "install", pip_name
+                ], capture_output=True, text=True, check=True)
+                print(f"✅ Successfully installed {package_name}")
+        
+        print("\n🔄 Verifying installation...")
+        # Re-check dependencies
+        all_installed = True
+        for package_name, _ in missing_packages:
+            try:
+                importlib.import_module(package_name)
+                print(f"✓ {package_name} is now available")
+            except ImportError:
+                print(f"✗ {package_name} installation verification failed")
+                all_installed = False
+        
+        if all_installed:
+            print("✅ All packages installed successfully!")
+            return True
+        else:
+            print("❌ Some packages failed to install properly.")
+            return False
+            
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Installation failed: {e}")
+        if e.stderr:
+            print(f"Error details: {e.stderr}")
+        print("\n💡 Try installing manually:")
+        print("   pip install -r requirements.txt")
+        return False
+    except FileNotFoundError:
+        print("❌ pip command not found. Please ensure Python and pip are installed.")
+        return False
+
+
+# Check dependencies before importing pandas
+if not check_and_install_dependencies():
+    print("\n🚫 Exiting due to missing dependencies.")
+    sys.exit(1)
+
+# Now import pandas (should be available after dependency check)
+try:
+    import pandas as pd
+    import numpy as np
+except ImportError as e:
+    print(f"❌ Failed to import required packages: {e}")
+    print("Please run: pip install -r requirements.txt")
+    sys.exit(1)
 
 
 def load_data(filename):
